@@ -8,14 +8,15 @@ const userSchema = new Schema({
   gender: { type: String, enum: ["male", "female"], default: "male" },
   headline: { type: String },
   business: { type: String },
-  locations: { type: [{ type: String }] },
+  locations: { type: [{ type: String }], select: false},
   employments: {
     type: [
       {
         company: { type: String },
         job: { type: String }
       }
-    ]
+		],
+		select: false
   },
   educations: {
     type: [
@@ -26,8 +27,15 @@ const userSchema = new Schema({
         entrance_year: { type: String },
         graducation_year: { type: String }
       }
-    ]
-  }
+		],
+		select: false
+	},
+	following: {
+		type: [
+			{type: Schema.Types.ObjectId, ref: 'User'}
+		],
+		select: false
+	}
 });
 
 module.exports = model("User", userSchema);

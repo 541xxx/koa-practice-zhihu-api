@@ -8,7 +8,15 @@ class UserCtl {
     ctx.body = await User.find();
   }
   async findById(ctx) {
-    const user = await User.findById(ctx.params.id);
+    const { fields } = ctx.query;
+    const selectFields = fields
+      ? fields
+          .split(";")
+          .filter(v => v)
+          .map(v => ` +${v}`)
+          .join("")
+      : "";
+    const user = await User.findById(ctx.params.id).select(selectFields);
     if (!user) {
       ctx.throw(404, "用户不存在");
     } else {
@@ -44,7 +52,14 @@ class UserCtl {
       password: {
         type: "string",
         required: false
-      }
+      },
+      avatar_url: { type: "string", required: false },
+      gender: { type: "string", required: false },
+      headline: { type: "string", required: false },
+      business: { type: "string", required: false },
+      locations: { type: "array", itemType: "string", required: false },
+      employments: { type: "array", itemType: "object", required: false },
+      educations: { type: "array", itemType: "object", required: false }
     });
     const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
     if (!user) {
@@ -79,6 +94,61 @@ class UserCtl {
     const { _id, name } = user;
     const token = jsonwebtoken.sign({ _id, name }, secret, { expiresIn: "1d" });
     ctx.body = { token };
+  }
+  async listFollowing(ctx) {
+    const user = await User.findById(ctx.params.id)
+      .select("+following")
+      .populate("following");
+    if (!user) {
+      ctx.throw(404, "用户不存在");
+    }
+    ctx.body = user.following;
+  }
+  /**
+   * @description 获取某个用户的粉丝列表
+   * @param {*} ctx
+   * @memberof UserCtl
+   */
+  async listFollowers(ctx) {
+    const users = await User.find({ following: ctx.params.id });
+    ctx.body = users;
+  }
+
+  async checkUserExist(ctx, next) {
+    const user = await User.findById(ctx.params.id);
+    if (!user) {
+      ctx.throw(404, "用户不存在");
+    }
+    await next();
+  }
+  async checkUserExist(ctx, next) {
+    const user = await User.findById(ctx.params.id);
+    if (!user) {
+      ctx.throw(404, "用户不存在");
+    }
+    await next();
+  }
+
+  async follow(ctx) {
+    const me = await User.findById(ctx.state.user._id).select("+following");
+    const { id } = ctx.params;
+    // 需要把mongoose的数据类型转换为字符串
+    if (!me.following.map(v => v.toString()).includes(id)) {
+      me.following.push(id);
+      me.save();
+    }
+    ctx.status = 204;
+  }
+  async unfollow(ctx) {
+    const me = await User.findById(ctx.state.user._id).select("+following");
+    const { id } = ctx.params;
+    const index = me.following.map(v => v.toString()).indexOf(id);
+    // 需要把mongoose的数据类型转换为字符串
+    if (index > -1) {
+      me.following.splice(index, 1);
+      me.save();
+    }
+    ctx.status = 204;
   }
 }
 
