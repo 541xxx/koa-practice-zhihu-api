@@ -14,7 +14,7 @@ mongoose
     useNewUrlParser: true
   })
   .then(() => {
-    console.log("MongoDB have connected");
+    console.log("MongoDB connected");
   });
 mongoose.connection.on("error", () => {
   console.error;
